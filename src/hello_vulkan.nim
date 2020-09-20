@@ -15,37 +15,38 @@ type
     ]
 
 let acs: ptr VkAllocationCallbacks = nil
-var inst: VkInstance
-var dev: VkDevice
-var pdev: VkPhysicalDevice
-var dum: VkDebugUtilsMessengerEXT
-var surf: VkSurfaceKHR
-var schain: VkSwapchainKHR
-var iviews: seq[VkImageView]
-var vbuffer: VkBuffer
-var vmem: VkDeviceMemory
-var ibuffer: VkBuffer
-var imem: VkDeviceMemory
-var dpool: VkDescriptorPool
-var fbuffers: seq[VkFramebuffer]
-var ubuffers: seq[VkBuffer]
-var umems: seq[VkDeviceMemory]
-var layout: VkPipelineLayout
-var rpass: VkRenderPass
-var dslayout: VkDescriptorSetLayout
-var dsets: seq[VkDescriptorSet]
-var pline: VkPipeline
-var cpool: VkCommandPool
-var cbuffers: seq[VkCommandBuffer]
-var gqueue: VkQueue
-var pqueue: VkQueue
 const MAX_FRAMES_IN_FLIGHT = 2
-var available: array[MAX_FRAMES_IN_FLIGHT,VkSemaphore]
-var finished: array[MAX_FRAMES_IN_FLIGHT,VkSemaphore]
-var completed: array[MAX_FRAMES_IN_FLIGHT,VkFence]
-var frame: uint
-var proj: Mat4[float32]
-var pos: Vec3[float32] = vec3(0.0f,0.0f,-7.0f)
+var
+  inst: VkInstance
+  dev: VkDevice
+  pdev: VkPhysicalDevice
+  dum: VkDebugUtilsMessengerEXT
+  surf: VkSurfaceKHR
+  schain: VkSwapchainKHR
+  iviews: seq[VkImageView]
+  vbuffer: VkBuffer
+  vmem: VkDeviceMemory
+  ibuffer: VkBuffer
+  imem: VkDeviceMemory
+  dpool: VkDescriptorPool
+  fbuffers: seq[VkFramebuffer]
+  ubuffers: seq[VkBuffer]
+  umems: seq[VkDeviceMemory]
+  layout: VkPipelineLayout
+  rpass: VkRenderPass
+  dslayout: VkDescriptorSetLayout
+  dsets: seq[VkDescriptorSet]
+  pline: VkPipeline
+  cpool: VkCommandPool
+  cbuffers: seq[VkCommandBuffer]
+  gqueue: VkQueue
+  pqueue: VkQueue
+  available: array[MAX_FRAMES_IN_FLIGHT,VkSemaphore]
+  finished: array[MAX_FRAMES_IN_FLIGHT,VkSemaphore]
+  completed: array[MAX_FRAMES_IN_FLIGHT,VkFence]
+  frame: uint
+  proj: Mat4[float32]
+  pos: Vec3[float32] = vec3(0.0f,0.0f,-7.0f)
 
 addHandler(newConsoleLogger())
 
