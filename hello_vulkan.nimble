@@ -12,6 +12,8 @@ bin           = @["hello_vulkan"]
 
 requires "nim >= 1.2.6"
 requires "https://github.com/jacereda/nim-cv"
+requires "https://github.com/jacereda/nim-vk"
+requires "glm"
 
 before build:
   exec("glslc src/shader.vert -o src/vert.spv")
