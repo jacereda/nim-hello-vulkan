@@ -891,8 +891,8 @@ proc draw() =
 proc update() =
   if cvPressed cvkLeftArrow: pos.x -= 0.1f
   if cvPressed cvkRightArrow: pos.x += 0.1f
-  if cvPressed cvkDownArrow: pos.y -= 0.1f
-  if cvPressed cvkUpArrow: pos.y += 0.1f
+  if cvPressed cvkDownArrow: pos.y += 0.1f
+  if cvPressed cvkUpArrow: pos.y -= 0.1f
   if cvPressed cvkX: pos.z -= 0.1f
   if cvPressed cvkZ: pos.z += 0.1f
   draw()
