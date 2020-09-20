@@ -761,6 +761,7 @@ proc updateUniformBuffers(idx: uint32) =
     )
 
 proc cleanupSwapChain() =
+  chk vkDeviceWaitIdle(dev)
   for fbuffer in fbuffers:
     vkDestroyFramebuffer(dev, fbuffer, nil)
   fbuffers.delete(0, fbuffers.high)
@@ -796,7 +797,6 @@ proc createSwapChain() =
   renderPass()
 
 proc recreateSwapChain() =
-  chk vkDeviceWaitIdle(dev)
   cleanupSwapChain()
   createSwapChain()
 
@@ -810,16 +810,16 @@ proc initVulkan(win: pointer, hinst: pointer) =
   dev = newDevice()
   vkGetDeviceQueue(dev, familyIndex(gfxFamily), 0, gqueue.addr)
   vkGetDeviceQueue(dev, familyIndex(presentFamily), 0, pqueue.addr)
-  schain = newSwapchain()
-  iviews = createImageViews()
   dslayout = newDescriptorSetLayout()
-  layout = newPipelineLayout()
-  rpass = newRenderPass()
-  pline = newGraphicsPipeline()
-  fbuffers = createFramebuffers()
-  cpool = newCommandPool()
   vbuffer = newDevBuffer(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT.VkBufferUsageFlags, (array[8, Vertex]).sizeOf)
   vmem = allocDevBufferMemory(vbuffer)
+  ibuffer = newDevBuffer(VK_BUFFER_USAGE_INDEX_BUFFER_BIT.VkBufferUsageFlags, (array[36, uint32]).sizeOf)
+  imem = allocDevBufferMemory(ibuffer)
+  available = createSemaphores()
+  finished = createSemaphores()
+  completed = createFences()
+  cpool = newCommandPool()
+  createSwapChain()
   withStagingMemory(vbuffer, vmem, vert, array[8, Vertex]):
     for i in 0..<8:
       vert[i].x = if (i and 1) != 0: 1.0f else: -1.0f
@@ -829,8 +829,6 @@ proc initVulkan(win: pointer, hinst: pointer) =
       vert[i].g = if (i and 2) != 0: 1.0f else: 0.0f
       vert[i].b = if (i and 4) != 0: 1.0f else: 0.0f
       vert[i].a = 1.0f
-  ibuffer = newDevBuffer(VK_BUFFER_USAGE_INDEX_BUFFER_BIT.VkBufferUsageFlags, (array[36, uint32]).sizeOf)
-  imem = allocDevBufferMemory(ibuffer)
   withStagingMemory(ibuffer, imem, ind, array[36, uint32]):
     ind[] = [
       4'u32, 5'u32, 7'u32, 7'u32, 6'u32, 4'u32, # front
@@ -840,49 +838,21 @@ proc initVulkan(win: pointer, hinst: pointer) =
       6'u32, 7'u32, 3'u32, 3'u32, 2'u32, 6'u32, # top
       0'u32, 1'u32, 5'u32, 5'u32, 4'u32, 0'u32, # bottom
     ]
-  ubuffers = createUniformBuffers()
-  umems = createUniformBuffersMemory()
-  dpool = newDescriptorPool()
-  dsets = createDescriptorSets()
-  cbuffers = createCommandBuffers()
-  available = createSemaphores()
-  finished = createSemaphores()
-  completed = createFences()
-  renderPass()
 
 proc termVulkan() =
-  chk vkDeviceWaitIdle(dev)
+  cleanupSwapChain()
   for fence in completed:
     vkDestroyFence(dev, fence, nil)
   for sem in finished:
     vkDestroySemaphore(dev, sem, nil)
   for sem in available:
     vkDestroySemaphore(dev, sem, nil)
-  vkFreeCommandBuffers(dev, cpool, cbuffers.len.uint32, cbuffers[0].addr)
-  cbuffers.delete(0, cbuffers.high)
   vkDestroyCommandPool(dev, cpool, nil)
-  vkDestroyDescriptorPool(dev, dpool, nil)
-  for umem in umems:
-    vkFreeMemory(dev, umem, nil)
-  umems.delete(0, umems.high)
-  for ubuffer in ubuffers:
-    vkDestroyBuffer(dev, ubuffer, nil)
-  ubuffers.delete(0, ubuffers.high)
   vkFreeMemory(dev, imem, nil)
   vkDestroyBuffer(dev, ibuffer, nil)
   vkFreeMemory(dev, vmem, nil)
   vkDestroyBuffer(dev, vbuffer, nil)
-  for fbuffer in fbuffers:
-    vkDestroyFramebuffer(dev, fbuffer, nil)
-  fbuffers.delete(0, fbuffers.high)
-  vkDestroyPipeline(dev, pline, nil)
-  vkDestroyRenderPass(dev, rpass, nil)
-  vkDestroyPipelineLayout(dev, layout, nil)
   vkDestroyDescriptorSetLayout(dev, dslayout, nil)
-  for iview in iviews:
-    vkDestroyImageView(dev, iview, nil)
-  iviews.delete(0, iviews.high)
-  vkDestroySwapchainKHR(dev, schain, nil)
   vkDestroySurfaceKHR(inst, surf, nil)
   vkDestroyDevice(dev, nil)
   vkDestroyDebugUtilsMessengerEXT(inst, dum, nil)
