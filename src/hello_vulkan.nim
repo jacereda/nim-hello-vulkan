@@ -753,7 +753,7 @@ proc updateUniformBuffers(idx: uint32) =
   let view =  mat4f()
   let model = mat4f()
   .translate(pos)
-  .rotate(2.0 * PI * cvMouseY().int.toFloat / cvHeight().int.toFloat, 1, 0, 0)
+  .rotate(-2.0 * PI * cvMouseY().int.toFloat / cvHeight().int.toFloat, 1, 0, 0)
   .rotate(-2.0 * PI * cvMouseX().int.toFloat / cvWidth().int.toFloat, 0, 1, 0)
   withMappedMemory(umems[idx], ubo, UniformBufferObject):
     ubo[] = UniformBufferObject(
