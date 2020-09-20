@@ -124,10 +124,6 @@ proc newVkInstance(): VkInstance =
   var ep: array[256,VkExtensionProperties]
   var num = ep.len.uint32
   discard vkEnumerateInstanceExtensionProperties(nil, num.addr, ep[0].addr)
-  # echo "num ext ", num
-  # for i in 0..<num:
-  #   echo $(cast[cstring](ep[i].extensionName.unsafeAddr))
-  # result
 
 proc pickPhysicalDevice(inst: VkInstance, index: int): VkPhysicalDevice =
   var devs: array[32, VkPhysicalDevice]
@@ -205,26 +201,12 @@ proc surfaceFormat(): VkSurfaceFormatKHR =
   var sf: array[256,VkSurfaceFormatKHR]
   var nsf = sf.len.uint32
   chk pdev.vkGetPhysicalDeviceSurfaceFormatsKHR(surf, nsf.addr, sf[0].addr)
-  # for i in 0..<nsf:
-  #   echo sf[i].repr
   return sf[0]
 
 
 proc newSwapchain(): VkSwapchainKHR =
   var sc: VkSurfaceCapabilitiesKHR
   chk pdev.vkGetPhysicalDeviceSurfaceCapabilitiesKHR(surf, sc.addr)
-  # var fp: array[256,VkQueueFamilyProperties]
-  # var qc = fp.len.uint32
-  # pdev.vkGetPhysicalDeviceQueueFamilyProperties(qc.addr, fp[0].addr)
-  # for i in 0..<qc:
-  #   echo fp[i].repr
-
-
-  # var pm: array[256,VkPresentModeKHR]
-  # var npm = pm.len.uint32
-  # chk pdev.vkGetPhysicalDeviceSurfacePresentModesKHR(surf, npm.addr, pm[0].addr)
-  # for i in 0..<npm:
-  #   echo pm[i].repr
   let sf = surfaceFormat()
   let qfi = [
     familyIndex(gfxFamily),
@@ -648,7 +630,7 @@ proc createDescriptorSets(): seq[VkDescriptorSet] =
   let dsai = mkVkDescriptorSetAllocateInfo(
     descriptorPool = dpool,
     descriptorSetCount = result.len.uint32,
-    pSetLayouts = dsls[0].addr, #dsls[0].addr,
+    pSetLayouts = dsls[0].addr,
     )
   chk dev.vkAllocateDescriptorSets(dsai.unsafeAddr, result[0].addr)
   for i in 0..result.high:
