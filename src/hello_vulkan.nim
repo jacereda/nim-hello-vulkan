@@ -158,8 +158,6 @@ proc newDevice(): VkDevice =
                               pQueuePriorities = qp.unsafeAddr),
     ]
   let ext = [
-    VK_KHR_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME,
-    VK_KHR_EXTERNAL_SEMAPHORE_WIN32_EXTENSION_NAME,
     VK_KHR_SWAPCHAIN_EXTENSION_NAME,
     ]
   let dci = mkVkDeviceCreateInfo(queueCreateInfoCount = dqci.len.uint32,
