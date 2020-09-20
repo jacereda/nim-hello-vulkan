@@ -41,9 +41,9 @@ var
   cbuffers: seq[VkCommandBuffer]
   gqueue: VkQueue
   pqueue: VkQueue
-  available: array[MAX_FRAMES_IN_FLIGHT,VkSemaphore]
-  finished: array[MAX_FRAMES_IN_FLIGHT,VkSemaphore]
-  completed: array[MAX_FRAMES_IN_FLIGHT,VkFence]
+  savailable: array[MAX_FRAMES_IN_FLIGHT,VkSemaphore]
+  sfinished: array[MAX_FRAMES_IN_FLIGHT,VkSemaphore]
+  fcompleted: array[MAX_FRAMES_IN_FLIGHT,VkFence]
   frame: uint
   proj: Mat4[float32]
   pos: Vec3[float32] = vec3(0.0f,0.0f,-7.0f)
@@ -754,9 +754,9 @@ proc initVulkan(win: pointer, hinst: pointer) =
   vmem = allocDevBufferMemory(vbuffer)
   ibuffer = newDevBuffer(VK_BUFFER_USAGE_INDEX_BUFFER_BIT.VkBufferUsageFlags, (array[36, uint32]).sizeOf)
   imem = allocDevBufferMemory(ibuffer)
-  available = createSemaphores()
-  finished = createSemaphores()
-  completed = createFences()
+  savailable = createSemaphores()
+  sfinished = createSemaphores()
+  fcompleted = createFences()
   cpool = newCommandPool()
   createSwapChain()
   withStagingMemory(vbuffer, vmem, vert, array[8, Vertex]):
@@ -780,11 +780,11 @@ proc initVulkan(win: pointer, hinst: pointer) =
 
 proc termVulkan() =
   cleanupSwapChain()
-  for fence in completed:
+  for fence in fcompleted:
     dev.vkDestroyFence(fence, acs)
-  for sem in finished:
+  for sem in sfinished:
     dev.vkDestroySemaphore(sem, acs)
-  for sem in available:
+  for sem in savailable:
     dev.vkDestroySemaphore(sem, acs)
   dev.vkDestroyCommandPool(cpool, acs)
   dev.vkFreeMemory(imem, acs)
@@ -800,25 +800,25 @@ proc termVulkan() =
 
 proc draw() =
   let curr = frame mod MAX_FRAMES_IN_FLIGHT
-  chk dev.vkWaitForFences(1, completed[curr].addr, VK_TRUE, uint64.high)
-  chk dev.vkResetFences(1, completed[curr].addr)
+  chk dev.vkWaitForFences(1, fcompleted[curr].addr, VK_TRUE, uint64.high)
+  chk dev.vkResetFences(1, fcompleted[curr].addr)
   var idx : uint32
-  chk dev.vkAcquireNextImageKHR(schain, uint.high, available[curr], nil.VkFence, idx.addr)
+  chk dev.vkAcquireNextImageKHR(schain, uint.high, savailable[curr], nil.VkFence, idx.addr)
   updateUniformBuffers(idx)
   let ws = [VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT.VkPipelineStageFlags,]
   let si = mkVkSubmitInfo(
     waitSemaphoreCount = 1,
-    pWaitSemaphores = available[curr].addr,
+    pWaitSemaphores = savailable[curr].addr,
     pWaitDstStageMask = ws[0].unsafeAddr,
     commandBufferCount = 1,
     pCommandBuffers = cbuffers[idx].addr,
     signalSemaphoreCount = 1,
-    pSignalSemaphores = finished[curr].addr,
+    pSignalSemaphores = sfinished[curr].addr,
   )
-  chk gqueue.vkQueueSubmit(1, si.unsafeAddr, completed[curr])
+  chk gqueue.vkQueueSubmit(1, si.unsafeAddr, fcompleted[curr])
   let pi = mkVkPresentInfoKHR(
     waitSemaphoreCount = 1,
-    pWaitSemaphores = finished[curr].addr,
+    pWaitSemaphores = sfinished[curr].addr,
     swapchainCount = 1,
     pSwapchains = schain.addr,
     pImageIndices = idx.addr,
