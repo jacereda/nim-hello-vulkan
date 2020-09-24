@@ -469,7 +469,7 @@ proc findMemoryType(bits: uint32, properties: VkMemoryPropertyFlags): uint32 =
 
 proc newBuffer(usage: VkBufferUsageFlags, size: int): VkBuffer =
   let bci = mkVkBufferCreateInfo(
-    size = size.VkDeviceSize,
+    size = size,
     usage = usage,
     sharingMode = VK_SHARING_MODE_EXCLUSIVE,
     pQueueFamilyIndices = nil,
@@ -491,7 +491,7 @@ proc allocBufferMemory(b: VkBuffer, flags: VkMemoryPropertyFlags): VkDeviceMemor
       memoryTypeIndex = findMemoryType(mr.memoryTypeBits, flags),
       )
     chk dev.vkAllocateMemory(mai.unsafeAddr, acs, result.addr)
-    chk dev.vkBindBufferMemory(b, result, 0.VkDeviceSize)
+    chk dev.vkBindBufferMemory(b, result, 0)
 
 proc allocDevBufferMemory(b: VkBuffer): VkDeviceMemory =
   allocBufferMemory(b, {VK_MEMORY_PROPERTY_DEVICE_LOCAL})
@@ -501,7 +501,7 @@ proc allocStaBufferMemory(b: VkBuffer): VkDeviceMemory =
 
 template withMappedMemory(dm: VkDeviceMemory, nm: untyped, t: untyped, ops: untyped) =
   var nm: ptr t
-  chk dev.vkMapMemory(dm, 0.VkDeviceSize, t.sizeOf.VkDeviceSize, {}, nm.addr)
+  chk dev.vkMapMemory(dm, 0, t.sizeOf, {}, nm.addr)
   ops
   dev.vkUnmapMemory(dm)
 
@@ -519,9 +519,9 @@ proc copyBuffer(sb: VkBuffer, db: VkBuffer, sz: int) =
   )
   chk cb.vkBeginCommandBuffer(cbbi.unsafeAddr)
   let bc = mkVkBufferCopy(
-    srcOffset = 0.VkDeviceSize,
-    dstOffset = 0.VkDeviceSize,
-    size = sz.VkDeviceSize,
+    srcOffset = 0,
+    dstOffset = 0,
+    size = sz,
   )
   cb.vkCmdCopyBuffer(sb, db, 1, bc.unsafeAddr)
   chk cb.vkEndCommandBuffer()
@@ -540,7 +540,7 @@ template withStagingMemory(b: VkBuffer, dm: VkDeviceMemory, nm: untyped, t: unty
   let sb = newStaBuffer(t.sizeOf)
   let sbm = allocStaBufferMemory(sb)
   var nm: ptr t
-  chk dev.vkMapMemory(sbm, 0.VkDeviceSize, t.sizeOf.VkDeviceSize, {}, nm.addr)
+  chk dev.vkMapMemory(sbm, 0, t.sizeOf, {}, nm.addr)
   ops
   dev.vkUnmapMemory(sbm)
   copyBuffer(sb, b, t.sizeOf)
@@ -564,7 +564,7 @@ proc createUniformBuffersMemory(): seq[VkDeviceMemory] =
       )
     var dm: VkDeviceMemory
     chk dev.vkAllocateMemory(mai.unsafeAddr, acs, dm.addr)
-    chk dev.vkBindBufferMemory(ub, dm, 0.VkDeviceSize)
+    chk dev.vkBindBufferMemory(ub, dm, 0)
     result.add(dm)
 
 proc newDescriptorPool(): VkDescriptorPool =
@@ -593,8 +593,8 @@ proc createDescriptorSets(): seq[VkDescriptorSet] =
   for i in 0..result.high:
     let dbi = mkVkDescriptorBufferInfo(
       buffer = ubuffers[i],
-      offset = 0.VkDeviceSize,
-      range = UniformBufferObject.sizeOf.VkDeviceSize,
+      offset = 0,
+      range = UniformBufferObject.sizeOf,
       )
     let wds = mkVkWriteDescriptorSet(
       dstSet = result[i],
@@ -664,7 +664,7 @@ proc renderPass() =
     let vbuffers = [ vbuffer, ]
     let offsets = [ 0.VkDeviceSize, ]
     cbuffer.vkCmdBindVertexBuffers(0.uint32, vbuffers.len.uint32, vbuffers[0].unsafeAddr, offsets[0].unsafeAddr)
-    cbuffer.vkCmdBindIndexBuffer(ibuffer, 0.VkDeviceSize, VK_INDEX_TYPE_UINT32)
+    cbuffer.vkCmdBindIndexBuffer(ibuffer, 0, VK_INDEX_TYPE_UINT32)
     cbuffer.vkCmdBindDescriptorSets(VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 0, 1, dsets[i].addr, 0, nil)
     cbuffer.vkCmdDrawIndexed(36u32, 1u32, 0u32, 0i32, 0u32)
     cbuffer.vkCmdEndRenderPass()
@@ -803,7 +803,7 @@ proc draw() =
   chk dev.vkWaitForFences(1, fcompleted[curr].addr, VK_TRUE, uint64.high)
   chk dev.vkResetFences(1, fcompleted[curr].addr)
   var idx : uint32
-  chk dev.vkAcquireNextImageKHR(schain, uint.high, savailable[curr], nil.VkFence, idx.addr)
+  chk dev.vkAcquireNextImageKHR(schain, uint.high, savailable[curr], nil, idx.addr)
   updateUniformBuffers(idx)
   let ws = [{VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT},]
   let si = mkVkSubmitInfo(
