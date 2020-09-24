@@ -88,13 +88,13 @@ proc pickPhysicalDevice(inst: VkInstance, index: int): VkPhysicalDevice =
   var devs: array[32, VkPhysicalDevice]
   var ndevs = devs.len.uint32
   chk inst.vkEnumeratePhysicalDevices(ndevs.addr, devs[0].addr)
-  return devs[index]
+  devs[index]
 
 func gfxFamily(fp: VkQueueFamilyProperties, pres: bool): bool =
-  return (fp.queueFlags.int and VK_QUEUE_GRAPHICS_BIT.int) != 0
+  VK_QUEUE_GRAPHICS in fp.queueFlags
 
 func presentFamily(fp: VkQueueFamilyProperties, pres: bool): bool =
-  return pres
+  pres
 
 proc familyIndex(filt: proc(fp: VkQueueFamilyProperties, pres: bool):bool): uint32 =
   var qfs: array[32,VkQueueFamilyProperties]
@@ -106,7 +106,7 @@ proc familyIndex(filt: proc(fp: VkQueueFamilyProperties, pres: bool):bool): uint
     chk pdev.vkGetPhysicalDeviceSurfaceSupportKHR(i, surf, pres.addr)
     if filt(qf, pres.bool != VK_FALSE.bool):
         return i.uint32
-  return 0xffffffffu32
+  0xffffffffu32
 
 proc newDevice(): VkDevice =
   let qp = 0.0.float32
@@ -137,12 +137,12 @@ proc debugCB(messageSeverity: VkDebugUtilsMessageSeverityFlagBitsEXT,
 
 proc newDebugMessenger(): VkDebugUtilsMessengerEXT =
   let dumci = mkVkDebugUtilsMessengerCreateInfoEXT(
-    messageSeverity = (VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT.uint32 or
-                       VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT.uint32 or
-                       VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT.uint32).VkDebugUtilsMessageSeverityFlagsEXT,
-    messageType = (VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT.uint32 or
-                   VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT.uint32 or
-                   VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT.uint32).VkDebugUtilsMessageTypeFlagsEXT,
+    messageSeverity = { VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_EXT,
+                        VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_EXT,
+                        VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_EXT },
+    messageType = { VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_EXT,
+                    VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_EXT,
+                    VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_EXT },
     pfnUserCallback = debugCB,
   )
   chk inst.vkCreateDebugUtilsMessengerEXT(dumci.unsafeAddr, acs, result.addr)
@@ -158,7 +158,7 @@ proc surfaceFormat(): VkSurfaceFormatKHR =
   var sf: array[256,VkSurfaceFormatKHR]
   var nsf = sf.len.uint32
   chk pdev.vkGetPhysicalDeviceSurfaceFormatsKHR(surf, nsf.addr, sf[0].addr)
-  return sf[0]
+  sf[0]
 
 
 proc newSwapchain(): VkSwapchainKHR =
@@ -176,7 +176,7 @@ proc newSwapchain(): VkSwapchainKHR =
     imageColorSpace = sf.colorSpace,
     imageExtent = sc.currentExtent,
     imageArrayLayers = 1,
-    imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT.VkImageUsageFlags,
+    imageUsage = {VK_IMAGE_USAGE_COLOR_ATTACHMENT},
     imageSharingMode = if qfi[0] == qfi[1]: VK_SHARING_MODE_EXCLUSIVE else: VK_SHARING_MODE_CONCURRENT,
     queueFamilyIndexCount = qfi.len.uint32,
     pQueueFamilyIndices = qfi[0].unsafeAddr,
@@ -205,7 +205,7 @@ proc createImageViews(): seq[VkImageView] =
         a = VK_COMPONENT_SWIZZLE_IDENTITY,
       ),
       subresourceRange = mkVkImageSubresourceRange(
-        aspectMask = VK_IMAGE_ASPECT_COLOR_BIT.VkImageAspectFlags,
+        aspectMask = {VK_IMAGE_ASPECT_COLOR},
         baseMipLevel = 0,
         levelCount = 1,
         baseArrayLayer = 0,
@@ -229,7 +229,7 @@ proc newDescriptorSetLayout(): VkDescriptorSetLayout =
       binding = 0,
       descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
       descriptorCount = 1,
-      stageFlags = VK_SHADER_STAGE_VERTEX_BIT.VkShaderStageFlags,
+      stageFlags = {VK_SHADER_STAGE_VERTEX},
     ),
   ]
   let dslci = mkVkDescriptorSetLayoutCreateInfo(
@@ -279,9 +279,9 @@ proc newRenderPass(): VkRenderPass =
     mkVkSubpassDependency(
       srcSubPass = VK_SUBPASS_EXTERNAL,
       dstSubpass = 0,
-      srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT.VkPipelineStageFlags,
-      dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT.VkPipelineStageFlags,
-      dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT.VkAccessFlags,
+      srcStageMask = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT},
+      dstStageMask = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT},
+      dstAccessMask = {VK_ACCESS_COLOR_ATTACHMENT_WRITE},
     )
   ]
   let rpci = mkVkRenderPassCreateInfo(
@@ -358,7 +358,7 @@ proc newGraphicsPipeline(): VkPipeline =
     depthClampEnable = VK_FALSE,
     rasterizerDiscardEnable = VK_FALSE,
     polygonMode = VK_POLYGON_MODE_FILL,
-    cullMode = VK_CULL_MODE_BACK_BIT.VkCullModeFlags,
+    cullMode = {VK_CULL_MODE_BACK},
     frontFace = VK_FRONT_FACE_CLOCKWISE,
     depthBiasEnable = VK_FALSE,
     depthBiasConstantFactor = 0.0f,
@@ -382,7 +382,7 @@ proc newGraphicsPipeline(): VkPipeline =
       srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
       dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
       alphaBlendOp = VK_BLEND_OP_ADD,
-      colorWriteMask = (VK_COLOR_COMPONENT_R_BIT.uint or VK_COLOR_COMPONENT_G_BIT.uint or VK_COLOR_COMPONENT_B_BIT.uint or VK_COLOR_COMPONENT_A_BIT.uint).VkColorComponentFlags
+      colorWriteMask = {VK_COLOR_COMPONENT_R, VK_COLOR_COMPONENT_G, VK_COLOR_COMPONENT_B, VK_COLOR_COMPONENT_A}
     ),
   ]
   let pcbsci = mkVkPipelineColorBlendStateCreateInfo(
@@ -462,10 +462,10 @@ proc findMemoryType(bits: uint32, properties: VkMemoryPropertyFlags): uint32 =
   var mp: VkPhysicalDeviceMemoryProperties
   pdev.vkGetPhysicalDeviceMemoryProperties(mp.addr)
   for i in 0..<mp.memoryTypeCount:
-    if ((bits and (1u32 shl i)) != 0) and ((mp.memoryTypes[i].propertyFlags.uint32 and properties.uint32) == properties.uint32):
+    if ((bits and (1u32 shl i)) != 0) and (properties < mp.memoryTypes[i].propertyFlags):
       return i
   assert(false)
-  return (uint32.high)
+  (uint32.high)
 
 proc newBuffer(usage: VkBufferUsageFlags, size: int): VkBuffer =
   let bci = mkVkBufferCreateInfo(
@@ -477,10 +477,10 @@ proc newBuffer(usage: VkBufferUsageFlags, size: int): VkBuffer =
   chk dev.vkCreateBuffer(bci.unsafeAddr, acs, result.addr)
 
 proc newDevBuffer(usage: VkBufferUsageFlags, size: int): VkBuffer =
-  newBuffer((usage.uint or VK_BUFFER_USAGE_TRANSFER_DST_BIT.uint).VkBufferUsageFlags, size)
+  newBuffer(usage + {VK_BUFFER_USAGE_TRANSFER_DST}, size)
 
 proc newStaBuffer(size: int): VkBuffer =
-  newBuffer(VK_BUFFER_USAGE_TRANSFER_SRC_BIT.VkBufferUsageFlags, size)
+  newBuffer({VK_BUFFER_USAGE_TRANSFER_SRC}, size)
 
 
 proc allocBufferMemory(b: VkBuffer, flags: VkMemoryPropertyFlags): VkDeviceMemory =
@@ -494,14 +494,14 @@ proc allocBufferMemory(b: VkBuffer, flags: VkMemoryPropertyFlags): VkDeviceMemor
     chk dev.vkBindBufferMemory(b, result, 0.VkDeviceSize)
 
 proc allocDevBufferMemory(b: VkBuffer): VkDeviceMemory =
-  allocBufferMemory(b, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT.VkMemoryPropertyFlags)
+  allocBufferMemory(b, {VK_MEMORY_PROPERTY_DEVICE_LOCAL})
 
 proc allocStaBufferMemory(b: VkBuffer): VkDeviceMemory =
-  allocBufferMemory(b, (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT.uint32 or VK_MEMORY_PROPERTY_HOST_COHERENT_BIT.uint32).VkMemoryPropertyFlags)
+  allocBufferMemory(b, {VK_MEMORY_PROPERTY_HOST_VISIBLE, VK_MEMORY_PROPERTY_HOST_COHERENT})
 
 template withMappedMemory(dm: VkDeviceMemory, nm: untyped, t: untyped, ops: untyped) =
   var nm: ptr t
-  chk dev.vkMapMemory(dm, 0.VkDeviceSize, t.sizeOf.VkDeviceSize, 0.VkMemoryMapFlags, nm.addr)
+  chk dev.vkMapMemory(dm, 0.VkDeviceSize, t.sizeOf.VkDeviceSize, {}, nm.addr)
   ops
   dev.vkUnmapMemory(dm)
 
@@ -515,7 +515,7 @@ proc copyBuffer(sb: VkBuffer, db: VkBuffer, sz: int) =
   var cb: VkCommandBuffer
   chk dev.vkAllocateCommandBuffers(cbai.unsafeAddr, cb.addr)
   let cbbi = mkVkCommandBufferBeginInfo(
-    flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT.VkCommandBufferUsageFlags,
+    flags = {VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT},
   )
   chk cb.vkBeginCommandBuffer(cbbi.unsafeAddr)
   let bc = mkVkBufferCopy(
@@ -540,7 +540,7 @@ template withStagingMemory(b: VkBuffer, dm: VkDeviceMemory, nm: untyped, t: unty
   let sb = newStaBuffer(t.sizeOf)
   let sbm = allocStaBufferMemory(sb)
   var nm: ptr t
-  chk dev.vkMapMemory(sbm, 0.VkDeviceSize, t.sizeOf.VkDeviceSize, 0.VkMemoryMapFlags, nm.addr)
+  chk dev.vkMapMemory(sbm, 0.VkDeviceSize, t.sizeOf.VkDeviceSize, {}, nm.addr)
   ops
   dev.vkUnmapMemory(sbm)
   copyBuffer(sb, b, t.sizeOf)
@@ -550,7 +550,7 @@ template withStagingMemory(b: VkBuffer, dm: VkDeviceMemory, nm: untyped, t: unty
 proc createUniformBuffers(): seq[VkBuffer] =
   result = newSeq[VkBuffer]()
   for i in 0..iviews.high:
-    let ub = newBuffer(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT.VkBufferUsageFlags, UniformBufferObject.sizeOf)
+    let ub = newBuffer({VK_BUFFER_USAGE_UNIFORM_BUFFER}, UniformBufferObject.sizeOf)
     result.add(ub)
 
 proc createUniformBuffersMemory(): seq[VkDeviceMemory] =
@@ -560,7 +560,7 @@ proc createUniformBuffersMemory(): seq[VkDeviceMemory] =
     dev.vkGetBufferMemoryRequirements(ub, mr.addr)
     let mai = mkVkMemoryAllocateInfo(
       allocationSize = mr.size,
-      memoryTypeIndex = findMemoryType(mr.memoryTypeBits, (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT.uint32 or VK_MEMORY_PROPERTY_HOST_COHERENT_BIT.uint32).VkMemoryPropertyFlags),
+      memoryTypeIndex = findMemoryType(mr.memoryTypeBits, {VK_MEMORY_PROPERTY_HOST_VISIBLE, VK_MEMORY_PROPERTY_HOST_COHERENT}),
       )
     var dm: VkDeviceMemory
     chk dev.vkAllocateMemory(mai.unsafeAddr, acs, dm.addr)
@@ -680,7 +680,7 @@ proc createSemaphores(): array[MAX_FRAMES_IN_FLIGHT,VkSemaphore] =
 
 proc newFence(): VkFence =
   let fci = mkVkFenceCreateInfo(
-    flags = VK_FENCE_CREATE_SIGNALED_BIT.VkFenceCreateFlags,
+    flags = {VK_FENCE_CREATE_SIGNALED},
   )
   chk dev.vkCreateFence(fci.unsafeAddr, acs, result.addr)
 
@@ -750,9 +750,9 @@ proc initVulkan(win: pointer, hinst: pointer) =
   dev.vkGetDeviceQueue(familyIndex(gfxFamily), 0, gqueue.addr)
   dev.vkGetDeviceQueue(familyIndex(presentFamily), 0, pqueue.addr)
   dslayout = newDescriptorSetLayout()
-  vbuffer = newDevBuffer(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT.VkBufferUsageFlags, (array[8, Vertex]).sizeOf)
+  vbuffer = newDevBuffer({VK_BUFFER_USAGE_VERTEX_BUFFER}, (array[8, Vertex]).sizeOf)
   vmem = allocDevBufferMemory(vbuffer)
-  ibuffer = newDevBuffer(VK_BUFFER_USAGE_INDEX_BUFFER_BIT.VkBufferUsageFlags, (array[36, uint32]).sizeOf)
+  ibuffer = newDevBuffer({VK_BUFFER_USAGE_INDEX_BUFFER}, (array[36, uint32]).sizeOf)
   imem = allocDevBufferMemory(ibuffer)
   savailable = createSemaphores()
   sfinished = createSemaphores()
@@ -805,7 +805,7 @@ proc draw() =
   var idx : uint32
   chk dev.vkAcquireNextImageKHR(schain, uint.high, savailable[curr], nil.VkFence, idx.addr)
   updateUniformBuffers(idx)
-  let ws = [VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT.VkPipelineStageFlags,]
+  let ws = [{VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT},]
   let si = mkVkSubmitInfo(
     waitSemaphoreCount = 1,
     pWaitSemaphores = savailable[curr].addr,
