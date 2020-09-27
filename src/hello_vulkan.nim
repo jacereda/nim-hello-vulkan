@@ -331,8 +331,8 @@ proc newGraphicsPipeline(): vk.Pipeline =
     vk.mkViewport(
       x = 0.0f,
       y = 0.0f,
-      width = cvWidth().float32,
-      height = cvHeight().float32,
+      width = canvasWidth().float32,
+      height = canvasHeight().float32,
       minDepth = 0.0f,
       maxDepth = 1.0f,
     ),
@@ -344,8 +344,8 @@ proc newGraphicsPipeline(): vk.Pipeline =
         y = 0,
       ),
       extent = vk.mkExtent2D(
-        width = cvWidth(),
-        height = cvHeight(),
+        width = canvasWidth(),
+        height = canvasHeight(),
       ),
     ),
   ]
@@ -451,8 +451,8 @@ proc createFramebuffers(): seq[vk.Framebuffer] =
       renderPass = rpass,
       attachmentCount = 1,
       pAttachments = iviews[i].addr,
-      width = cvWidth(),
-      height = cvHeight(),
+      width = canvasWidth(),
+      height = canvasHeight(),
       layers = 1,
       )
     var fb: vk.FrameBuffer
@@ -644,8 +644,8 @@ proc renderPass() =
           y = 0,
         ),
         extent = vk.mkExtent2D(
-          width = cvWidth(),
-          height = cvHeight(),
+          width = canvasWidth(),
+          height = canvasHeight(),
         ),
       ),
       clearValueCount = 1,
@@ -654,8 +654,8 @@ proc renderPass() =
     let vp = vk.mkViewport(
       x = 0.0f,
       y = 0.0f,
-      width = cvWidth().float32,
-      height = cvHeight().float32,
+      width = canvasWidth().float32,
+      height = canvasHeight().float32,
       minDepth = 0.0f,
       maxDepth = 1.0f,
     )
@@ -693,8 +693,8 @@ proc updateUniformBuffers(idx: uint32) =
   let view =  mat4f()
   let model = mat4f()
   .translate(pos)
-  .rotate(-2.0 * PI * cvMouseY().int.toFloat / cvHeight().int.toFloat, 1, 0, 0)
-  .rotate(-2.0 * PI * cvMouseX().int.toFloat / cvWidth().int.toFloat, 0, 1, 0)
+  .rotate(-2.0 * PI * mouseY().int.toFloat / canvasHeight().int.toFloat, 1, 0, 0)
+  .rotate(-2.0 * PI * mouseX().int.toFloat / canvasWidth().int.toFloat, 0, 1, 0)
   withMappedMemory(umems[idx], ubo, UniformBufferObject):
     ubo[] = UniformBufferObject(
       mvp: proj * view * model,
@@ -829,24 +829,24 @@ proc draw() =
 
 
 proc update() =
-  if cvPressed cvkLeftArrow: pos.x -= 0.1f
-  if cvPressed cvkRightArrow: pos.x += 0.1f
-  if cvPressed cvkDownArrow: pos.y += 0.1f
-  if cvPressed cvkUpArrow: pos.y -= 0.1f
-  if cvPressed cvkX: pos.z -= 0.1f
-  if cvPressed cvkZ: pos.z += 0.1f
+  if keyPressed cvkLeftArrow: pos.x -= 0.1f
+  if keyPressed cvkRightArrow: pos.x += 0.1f
+  if keyPressed cvkDownArrow: pos.y += 0.1f
+  if keyPressed cvkUpArrow: pos.y -= 0.1f
+  if keyPressed cvkX: pos.z -= 0.1f
+  if keyPressed cvkZ: pos.z += 0.1f
   draw()
 
 proc resized(w: uint, h: uint) =
   recreateSwapChain()
   proj = perspective(45.0f, w.float / h.float, 0.1f, 100000.0f)
 
-proc handler(e: ptr ev): int {.cdecl.} =
-  case evType(e):
+proc handler(e: ev): int {.cdecl.} =
+  case e.eventType:
     of cveResize:
-      resized(e.evWidth(), e.evHeight())
+      resized(e.eventWidth, e.eventHeight)
     of cveGLInit:
-      initVulkan(cast[pointer](e.evArg0), cast[pointer](e.evArg1))
+      initVulkan(cast[pointer](e.eventArg0), cast[pointer](e.eventArg1))
     of cveGLTerm:
       termVulkan()
     of cveUpdate:
@@ -855,5 +855,5 @@ proc handler(e: ptr ev): int {.cdecl.} =
     else:
       return 0
 
-discard cvRun(handler)
+discard run handler
 {.pop.}
